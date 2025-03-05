@@ -1,3 +1,16 @@
+dev_config.yaml
+prod_config.yaml
+logs/
+reports/
+
+### macOS ###
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+jats_venv
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
