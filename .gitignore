@@ -1,7 +1,6 @@
 dev_config.yaml
 prod_config.yaml
-logs/
-reports/
+log/
 
 ### macOS ###
 # General

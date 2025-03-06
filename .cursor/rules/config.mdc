@@ -1,0 +1,59 @@
+---
+description: config
+globs: *.py,*.yaml
+alwaysApply: false
+---
+# config  
+
+YAML 설정 파일을 로드하고 환경 변수를 처리합니다.
+
+## 주요 기능:
+    - YAML 설정 파일 로드
+        dev_config.yaml   # 개발 환경 설정
+        prod_config.yaml  # 운영 환경 설정
+        sample_config.yaml # 샘플 설정
+    
+    - 환경 변수 처리
+    - 설정값 유효성 검사
+    - 설정 정보 캐싱
+    - 데시보드 설정  
+    - 동적 설정 업데이트
+
+
+## 설정 항목:
+    - API 키 정보
+    - 리스크 관리 설정
+    - 로깅 설정
+    - 텔레그램 봇 설정
+
+## 파일 샘플 
+
+```yaml
+telegram:
+  token: "20164"
+  chat_id: "367"
+
+upbit:
+  access_key : "y4RQAK"
+  secret_key: "szS4m2u"
+
+kis:
+  access_key : "y4RQ"
+  secret_key: "szS4m"
+
+risk:
+  stop_loss_percent      : 3       # 기본 손절 비율
+  stop_loss_percent_high : 2       # 최고가 대비 손절 비율
+
+strategy:
+  rsi_period            : 14          # RSI 기간
+  macd_fast             : 12          # MACD 빠른선
+  macd_slow             : 26          # MACD 느린선
+  macd_signal           : 9           # MACD 시그널
+  desc                  : "전략적으로 3% 손절 후 매매 횟수 최대화"
+
+# 대시보드 설정
+dashboard:
+  port: 8501
+  refresh_interval: 60 
+```

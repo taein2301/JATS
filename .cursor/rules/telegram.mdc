@@ -1,0 +1,50 @@
+---
+description: telegram
+globs: *.py
+alwaysApply: false
+---
+
+# telegram  
+
+- 저녁 10시 부터 ~ 아침 8시 까지는 전송 금지 
+- 프로그램 종로시 24시간 전송  
+- 메시지 구성시 prefix 로 3번째 파라미터 사용 
+    ex> python main.py upbit prod 
+    ```
+    [upbit]
+    매도 
+    ```
+    ex> python main.py kis prod 
+    ```
+    [kis]
+    매도 
+    ```
+
+- 아래의 이모티콘 적절히 사용  
+
+"""
+UP_ARROW = "📈"         # 상승 추세
+DOWN_ARROW = "📉"       # 하락 추세
+MONEY_BAG = "💰"        # 수익/자금
+CROSS_MARK = "❌"       # 실패/오류
+CHART = "📊"           # 차트/분석
+BELL = "🔔"            # 알림
+ROCKET = "🚀"          # 급등/급상승
+FIRE = "🔥"            # 인기/화제
+STOPWATCH = "⏱️"       # 타이밍/시간
+TARGET = "🎯"          # 목표/타겟
+LIGHT_BULB = "💡"      # 아이디어/인사이트
+GEAR = "⚙️"            # 설정/시스템
+MAGNIFIER = "🔍"       # 검색/조사
+CHART_DOWN = "📊" 
+# 시간 관련 이모티콘
+CLOCK = "🕐"            # 시계
+HOURGLASS = "⌛"        # 모래시계
+ALARM_CLOCK = "⏰"      # 알람시계
+CHART_UP = "📈"        # 상승 차트
+LOCK = "🔒"            # 보안/잠금
+# 행운 관련 이모티콘
+FOUR_LEAF_CLOVER = "🍀"  # 행운의 네잎클로버
+STAR = "⭐"             # 행운의 별
+SPARKLES = "✨"         # 행운의 반짝임
+"""

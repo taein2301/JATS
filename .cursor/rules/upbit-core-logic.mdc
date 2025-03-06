@@ -1,0 +1,11 @@
+---
+description: upbit-core-logic
+globs: *
+alwaysApply: false
+---
+
+# upbit 매매 로직 미정 
+- api 호출은 최소한으로.
+- 비트 코인만 거래 하는거 아니고 upbit 거래 가능 모든 코인이 매매 대상 
+- 기본적인 껍테기만 만들어라  
+

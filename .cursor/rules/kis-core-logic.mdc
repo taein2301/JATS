@@ -1,0 +1,10 @@
+---
+description: kis-core-logic
+globs: 
+alwaysApply: false
+---
+# kis 매매 로직 미정 
+
+- api 호출은 최소한으로.
+- 한국 주식만 대상 아니고 미국 주식도 거래 대상  
+- 기본적인 껍테기만 만들어라  
