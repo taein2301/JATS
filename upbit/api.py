@@ -91,7 +91,7 @@ class UpbitAPI(APIBase):
         self.request_count += 1
 
     def _request(self, method: str, endpoint: str, params: Optional[Dict[str, Any]] = None, 
-                data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """
         API 요청 실행
         
@@ -100,16 +100,23 @@ class UpbitAPI(APIBase):
             endpoint: API 엔드포인트
             params: 쿼리 파라미터
             data: 요청 데이터
+            headers: 요청 헤더
             
         Returns:
             Dict[str, Any]: API 응답
         """
+        self.logger.debug(f"API 요청: {method} {endpoint}")
+        self.logger.debug(f"파라미터: {params}")
+        self.logger.debug(f"데이터: {data}")
+        self.logger.debug(f"헤더: {headers}")
+        
         self._handle_rate_limit()
         
         url = f"{self.BASE_URL}{endpoint}"
         
         # 인증 헤더 생성
-        headers = {}
+        if headers is None:
+            headers = {}
         if params:
             query_string = urlencode(params)
             headers.update(self._generate_auth_token(query_string))
@@ -131,6 +138,8 @@ class UpbitAPI(APIBase):
             
         except requests.exceptions.RequestException as e:
             self.logger.error(f"API 요청 실패: {str(e)}")
+            self.logger.error(f"요청 URL: {url}")
+            self.logger.error(f"요청 헤더: {headers}")
             if hasattr(e.response, 'text'):
                 self.logger.error(f"응답: {e.response.text}")
             raise
@@ -149,6 +158,8 @@ class UpbitAPI(APIBase):
         Returns:
             Dict[str, Any]: API 응답
         """
+        if not endpoint.startswith('/'):
+            endpoint = '/' + endpoint
         url = f"{self.BASE_URL}{endpoint}"
         
         # 인증 헤더 생성
