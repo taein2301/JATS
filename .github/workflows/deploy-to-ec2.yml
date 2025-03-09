@@ -50,7 +50,7 @@ jobs:
             # 애플리케이션 실행 (백그라운드로)
             nohup python main.py upbit prod &
 
-            EOF
+          EOF
 
       # 4. 임시 파일 삭제
       - name: Cleanup
