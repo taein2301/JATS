@@ -50,10 +50,6 @@ jobs:
             # 설정 파일 확인 및 복사
             if [ ! -f "prod_config.yaml" ]; then
               echo "경고: prod_config.yaml 파일이 없습니다."
-              if [ -f "sample_config.yaml" ]; then
-                cp sample_config.yaml prod_config.yaml
-                echo "sample_config.yaml을 prod_config.yaml로 복사했습니다."
-              fi
             fi
             
             # 로그 디렉토리 생성
