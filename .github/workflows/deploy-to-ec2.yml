@@ -47,14 +47,6 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
             
-            # 설정 파일 확인 및 복사
-            if [ ! -f "prod_config.yaml" ]; then
-              echo "경고: prod_config.yaml 파일이 없습니다."
-            fi
-            
-            # 로그 디렉토리 생성
-            mkdir -p logs
-            
             # 애플리케이션 실행 (백그라운드로)
             nohup python main.py --platform=upbit --env=prod &
 
