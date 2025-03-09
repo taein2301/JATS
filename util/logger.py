@@ -8,7 +8,7 @@ import logging
 import datetime
 from logging.handlers import TimedRotatingFileHandler
 import colorlog
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from util.config import ConfigManager
 
@@ -51,44 +51,49 @@ class Logger:
         log_format = '[%(asctime)s][%(levelname)s]%(message)s [%(filename)s:%(lineno)d]'
         date_format = '%Y-%m-%d %H:%M:%S'
 
+        # 로그 출력 대상 설정
+        output_targets: List[str] = config.get('logging.output', ['file', 'console'])
+
         # 콘솔 핸들러 설정 (색상 지원)
-        console_handler = colorlog.StreamHandler()
-        console_handler.setLevel(log_level)
-        
-        color_formatter = colorlog.ColoredFormatter(
-            '%(log_color)s' + log_format,
-            datefmt=date_format,
-            log_colors={
-                'DEBUG': 'cyan',
-                'INFO': 'green',
-                'WARNING': 'yellow',
-                'ERROR': 'red',
-                'CRITICAL': 'red,bg_white',
-            }
-        )
-        console_handler.setFormatter(color_formatter)
-        logger.addHandler(console_handler)
+        if 'console' in output_targets:
+            console_handler = colorlog.StreamHandler()
+            console_handler.setLevel(log_level)
+            
+            color_formatter = colorlog.ColoredFormatter(
+                '%(log_color)s' + log_format,
+                datefmt=date_format,
+                log_colors={
+                    'DEBUG': 'cyan',
+                    'INFO': 'green',
+                    'WARNING': 'yellow',
+                    'ERROR': 'red',
+                    'CRITICAL': 'red,bg_white',
+                }
+            )
+            console_handler.setFormatter(color_formatter)
+            logger.addHandler(console_handler)
 
         # 파일 핸들러 설정
-        log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'log')
-        os.makedirs(log_dir, exist_ok=True)
-        
-        today = datetime.datetime.now().strftime('%Y%m%d')
-        log_file = os.path.join(log_dir, f'{platform}-{today}.log')
-        
-        # 로그 로테이션 설정
-        file_handler = TimedRotatingFileHandler(
-            log_file,
-            when='midnight',
-            interval=1,
-            backupCount=config.get('logging.backup_count', 30),
-            encoding='utf-8'
-        )
-        file_handler.setLevel(log_level)
-        
-        file_formatter = logging.Formatter(log_format, datefmt=date_format)
-        file_handler.setFormatter(file_formatter)
-        logger.addHandler(file_handler)
+        if 'file' in output_targets:
+            log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'log')
+            os.makedirs(log_dir, exist_ok=True)
+            
+            today = datetime.datetime.now().strftime('%Y%m%d')
+            log_file = os.path.join(log_dir, f'{platform}-{today}.log')
+            
+            # 로그 로테이션 설정
+            file_handler = TimedRotatingFileHandler(
+                log_file,
+                when='midnight',
+                interval=1,
+                backupCount=config.get('logging.backup_count', 30),
+                encoding='utf-8'
+            )
+            file_handler.setLevel(log_level)
+            
+            file_formatter = logging.Formatter(log_format, datefmt=date_format)
+            file_handler.setFormatter(file_formatter)
+            logger.addHandler(file_handler)
 
         cls._loggers[name] = logger
         return logger

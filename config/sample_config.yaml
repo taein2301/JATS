@@ -42,6 +42,7 @@ logging:
   file_rotation: "daily"  # daily, size
   max_size_mb: 10  # size 로테이션 사용 시 최대 파일 크기 (MB)
   backup_count: 30  # 보관할 로그 파일 수
+  output: ["file", "console"]  # 로그 출력 대상 (file, console)
 
 # 대시보드 설정
 dashboard:
