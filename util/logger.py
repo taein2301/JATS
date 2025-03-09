@@ -48,7 +48,7 @@ class Logger:
             return logger
 
         # 로그 포맷 설정
-        log_format = '%(asctime)s [%(levelname)s] %(name)s - %(message)s [%(filename)s:%(lineno)d]'
+        log_format = '[%(asctime)s][%(levelname)s]%(message)s [%(filename)s:%(lineno)d]'
         date_format = '%Y-%m-%d %H:%M:%S'
 
         # 콘솔 핸들러 설정 (색상 지원)

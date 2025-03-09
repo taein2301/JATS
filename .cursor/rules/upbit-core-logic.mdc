@@ -3,9 +3,118 @@ description: upbit-core-logic
 globs: *
 alwaysApply: false
 ---
-
 # upbit 매매 로직 미정 
 - api 호출은 최소한으로.
-- 비트 코인만 거래 하는거 아니고 upbit 거래 가능 모든 코인이 매매 대상 
-- 기본적인 껍테기만 만들어라  
+- 기본적인 method 생성 하고 안에 로직 코딩은 하지 말아라
+- method 의 input / output 을 명시하고 구현될 로직을 주석으로 자세히 기록해라 
 
+# 사용 법   
+- main.py 에서 파라미터를 보고 아래와 같이 호출함. 
+trader = UpbitTrader(config=config, logger=logger, notifier=notifier)
+
+# 구조 
+- **`upbit/`**: upbit 관련 매매 로직 관련 모듈
+    ─ analyzer.py   : 분석  
+    ─ api.py        : 
+        - upbit api 호출  
+        - json 형태 리턴 
+    ─ trader.py     : 
+        - 매수 / 매매 트레이팅 
+        - analyzer.py 파일 에서 분석 한 정보 가져옴 
+        - api.py 파일 에서 api 를 호출함 
+
+
+## trader.py
+
+#### run(self)
+- 트레이딩 시스템의 메인 실행 루프
+- 10초/1분/5분/1시간 주기로 다양한 작업 수행
+- 포지션 체크, 매매 시그널 분석, 리포트 생성 등
+#### buy(self, market: str)
+- 지정된 마켓에 시장가 매수 주문 실행
+- KRW 잔고 확인 후 수수료를 고려한 매수
+- 주문 상태 확인 및 결과 통보
+#### sell(self, market: str)
+- 지정된 마켓의 보유 수량 전체 시장가 매도
+- 매도 결과 확인 및 수익률 계산
+- 거래 기록 생성 및 알림 전송
+#### cancel_abnormal_orders(self, market: Optional[str] = None)
+- 미체결된 비정상 주문들 일괄 취소
+- 특정 마켓 지정 시 해당 마켓만 취소
+#### check_signal(self)
+- 매수/매도 시그널 체크 및 거래 실행
+- 포지션 있을 때는 매도 시그널만 체크
+- 포지션 없을 때는 매수 시그널 체크
+#### check_position(self)
+- 현재 보유 중인 포지션 상태 확인
+- 앱이나 다른 곳에서의 변화 반영
+#### position_entered(self, market, price=0, amount=0)
+- 매수 포지션 진입 처리
+- 매수가격, 수량 등 포지션 정보 설정
+- 최고가 갱신 및 상태 업데이트
+#### position_exited(self)
+- 매도 포지션 정리
+- 포지션 관련 정보 초기화
+#### set_top_volume_10min(self)
+- 최근 10분간 거래량 상위 코인 조회
+- 거래대금 기준 정렬 및 변동률 분석
+#### dis_portfolio(self)
+- 포트폴리오 상세 분석 및 수익률 계산
+- 코인별 수익률, 보유 수량 평가금액 등 계산
+
+
+## analyzer.py 
+- 매매 전략 실행
+- 손절 조건 체크
+- 기술적 지표 계산
+#### run_trading_analyzer(self, market="KRW-BTC")
+- 목적: 매매 전략 실행
+- 기능:
+	- 기술적 지표 계산
+	- 매수/매도 조건 확인
+	- 시그널 생성 및 로깅
+- 출력: 매수 시그널 여부
+#### check_stop_loss_condition(self)
+- 목적: 손절 조건 체크
+- 기능:
+	- 매수가 대비 손실률 계산
+	- 최고가 대비 하락률 계산
+	- 손절 조건 충족 여부 확인
+- 출력: Boolean (손절 시그널 여부)
+#### \_get_technical_metrics(self, market="KRW-BTC", retry_count=3)
+- 목적: 기술적 지표 계산
+- 기능:
+	- RSI (상대강도지수) 계산
+	- MACD (이동평균수렴발산) 계산
+	- 볼린저 밴드 계산
+	- 20일 이동평균선 계산
+
+## api.py
+#### get_current_price(self, ticker_name="KRW-BTC")
+- 특정 코인의 현재가를 조회
+- 기본값으로 비트코인(KRW-BTC) 조회
+#### get_candles(self, market, interval="1d", count=200, to=None)
+- 캔들 데이터 조회
+- 다양한 시간 간격(1분~1개월)의 캔들 데이터 제공
+#### run_order 
+- 시장가 매수 주문
+- KRW 금액을 지정하여 매수
+- 시장가 매도 주문
+- 코인 수량을 지정하여 매도
+#### get_order_status(self, uuid)
+- 특정 주문의 상태 조회
+#### set_order_cancel(self, uuid: str)
+- 특정 주문 취소
+#### get_wait_order(self, market: Optional[str] = None)
+- 대기 중인 주문 조회
+- 특정 마켓 지정 가능
+#### get_closed_orders(self, market, to, page, limit, order_by)
+- 종료된 주문 내역 조회
+- 페이지네이션 지원
+- 정렬 방식 지정 가능
+#### get_balances(self)
+- 보유 자산 잔고 조회
+#### get_market_info(self)
+- KRW 마켓의 코인들만 필터링하여 제공
+#### get_market_name(self)
+- 마켓의 한글 이름 조회

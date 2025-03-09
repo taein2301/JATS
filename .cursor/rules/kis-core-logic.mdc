@@ -4,7 +4,22 @@ globs:
 alwaysApply: false
 ---
 # kis 매매 로직 미정 
-
 - api 호출은 최소한으로.
-- 한국 주식만 대상 아니고 미국 주식도 거래 대상  
-- 기본적인 껍테기만 만들어라  
+- 기본적인 method 생성 하고 안에 로직 코딩은 하지 말아라
+- method 의 input / output 을 명시하고 구현될 로직을 주석으로 자세히 기록해라 
+
+# 사용 법   
+- main.py 에서 파라미터를 보고 아래와 같이 호출함. 
+trader = KisTrader(config=config, logger=logger, notifier=notifier)
+
+
+# 구조 
+- **`kis/`**: upbit 관련 매매 로직 관련 모듈
+    ─ analyzer.py   : 분석  
+    ─ api.py        : 
+        - kis api 호출  
+        - json 형태 리턴 
+    ─ trader.py     : 
+        - 매수 / 매매 트레이팅 
+        - analyzer.py 파일 에서 분석 한 정보 가져옴 
+        - api.py 파일 에서 api 를 호출함 

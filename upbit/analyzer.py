@@ -1,275 +1,185 @@
 """
-Upbit 데이터 분석 모듈
-
-Upbit API에서 가져온 데이터를 분석하여 매매 신호를 생성합니다.
+Upbit 시장 분석 모듈
 """
-import logging
+from typing import Dict, List, Optional, Any, Tuple
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Any, Optional, Tuple
+from datetime import datetime, timedelta
 
-from util.config import ConfigManager
 from upbit.api import UpbitAPI
 
 
 class UpbitAnalyzer:
-    """Upbit 데이터 분석 클래스"""
-
-    def __init__(self, api: UpbitAPI, config: ConfigManager, logger: logging.Logger):
+    """
+    Upbit 시장 분석을 담당하는 클래스
+    """
+    
+    def __init__(self, api: UpbitAPI, logger: Any, config: Any):
         """
-        UpbitAnalyzer 초기화
+        Upbit 분석기 초기화
         
         Args:
-            api: Upbit API 인스턴스
-            config: 설정 관리자 인스턴스
-            logger: 로거 인스턴스
+            api: Upbit API 객체
+            logger: 로거 객체
+            config: 설정 객체
         """
         self.api = api
-        self.config = config
         self.logger = logger
-        
-        # 전략 설정 로드
-        self.rsi_period = config.get('strategy.rsi_period', 14)
-        self.macd_fast = config.get('strategy.macd_fast', 12)
-        self.macd_slow = config.get('strategy.macd_slow', 26)
-        self.macd_signal = config.get('strategy.macd_signal', 9)
-
-    def get_candles_as_dataframe(self, market: str, interval: str = 'minutes', unit: int = 60, count: int = 200) -> pd.DataFrame:
-        """
-        캔들 데이터를 DataFrame으로 변환
-        
-        Args:
-            market: 마켓 코드 (예: KRW-BTC)
-            interval: 캔들 간격 (minutes 또는 days)
-            unit: 분 단위 (interval이 minutes일 때만 사용)
-            count: 캔들 개수
-            
-        Returns:
-            pd.DataFrame: 캔들 데이터 DataFrame
-        """
-        try:
-            if interval == 'minutes':
-                candles = self.api.get_candles_minutes(market, unit, count)
-            elif interval == 'days':
-                candles = self.api.get_candles_days(market, count)
-            else:
-                raise ValueError(f"지원하지 않는 캔들 간격: {interval}")
-                
-            df = pd.DataFrame(candles)
-            
-            # 컬럼 이름 변경
-            df = df.rename(columns={
-                'opening_price': 'open',
-                'high_price': 'high',
-                'low_price': 'low',
-                'trade_price': 'close',
-                'candle_date_time_utc': 'date',
-                'candle_date_time_kst': 'date_kst',
-                'candle_acc_trade_volume': 'volume',
-                'candle_acc_trade_price': 'value'
-            })
-            
-            # 날짜 형식 변환
-            df['date'] = pd.to_datetime(df['date'])
-            
-            # 정렬 (최신 데이터가 마지막에 오도록)
-            df = df.sort_values('date')
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"캔들 데이터 가져오기 실패: {str(e)}")
-            raise
-
-    def calculate_rsi(self, df: pd.DataFrame, period: int = None) -> pd.DataFrame:
-        """
-        RSI(Relative Strength Index) 계산
-        
-        Args:
-            df: 캔들 데이터 DataFrame
-            period: RSI 기간 (기본값: None, 설정값 사용)
-            
-        Returns:
-            pd.DataFrame: RSI가 추가된 DataFrame
-        """
-        if period is None:
-            period = self.rsi_period
-            
-        # 가격 변화 계산
-        delta = df['close'].diff()
-        
-        # 상승/하락 구분
-        gain = delta.where(delta > 0, 0)
-        loss = -delta.where(delta < 0, 0)
-        
-        # 평균 계산
-        avg_gain = gain.rolling(window=period).mean()
-        avg_loss = loss.rolling(window=period).mean()
-        
-        # 첫 번째 값 계산 (SMA 방식)
-        avg_gain.iloc[period] = gain.iloc[1:period+1].mean()
-        avg_loss.iloc[period] = loss.iloc[1:period+1].mean()
-        
-        # 나머지 값 계산 (EMA 방식)
-        for i in range(period+1, len(df)):
-            avg_gain.iloc[i] = (avg_gain.iloc[i-1] * (period-1) + gain.iloc[i]) / period
-            avg_loss.iloc[i] = (avg_loss.iloc[i-1] * (period-1) + loss.iloc[i]) / period
-        
-        # RS 계산
-        rs = avg_gain / avg_loss
-        
-        # RSI 계산
-        df['rsi'] = 100 - (100 / (1 + rs))
-        
-        return df
-
-    def calculate_macd(self, df: pd.DataFrame, fast_period: int = None, 
-                      slow_period: int = None, signal_period: int = None) -> pd.DataFrame:
-        """
-        MACD(Moving Average Convergence Divergence) 계산
-        
-        Args:
-            df: 캔들 데이터 DataFrame
-            fast_period: 빠른 EMA 기간 (기본값: None, 설정값 사용)
-            slow_period: 느린 EMA 기간 (기본값: None, 설정값 사용)
-            signal_period: 시그널 기간 (기본값: None, 설정값 사용)
-            
-        Returns:
-            pd.DataFrame: MACD가 추가된 DataFrame
-        """
-        if fast_period is None:
-            fast_period = self.macd_fast
-        if slow_period is None:
-            slow_period = self.macd_slow
-        if signal_period is None:
-            signal_period = self.macd_signal
-            
-        # 지수 이동 평균 계산
-        ema_fast = df['close'].ewm(span=fast_period, adjust=False).mean()
-        ema_slow = df['close'].ewm(span=slow_period, adjust=False).mean()
-        
-        # MACD 계산
-        df['macd'] = ema_fast - ema_slow
-        
-        # 시그널 계산
-        df['macd_signal'] = df['macd'].ewm(span=signal_period, adjust=False).mean()
-        
-        # 히스토그램 계산
-        df['macd_hist'] = df['macd'] - df['macd_signal']
-        
-        return df
-
-    def calculate_moving_averages(self, df: pd.DataFrame, periods: List[int] = [5, 20, 60, 120]) -> pd.DataFrame:
-        """
-        이동 평균 계산
-        
-        Args:
-            df: 캔들 데이터 DataFrame
-            periods: 이동 평균 기간 목록
-            
-        Returns:
-            pd.DataFrame: 이동 평균이 추가된 DataFrame
-        """
-        for period in periods:
-            df[f'ma{period}'] = df['close'].rolling(window=period).mean()
-            
-        return df
-
-    def analyze_market(self, market: str) -> Dict[str, Any]:
-        """
-        시장 분석 실행
-        
-        Args:
-            market: 마켓 코드 (예: KRW-BTC)
-            
-        Returns:
-            Dict[str, Any]: 분석 결과
-        """
-        try:
-            # 캔들 데이터 가져오기
-            df = self.get_candles_as_dataframe(market)
-            
-            # 기술적 지표 계산
-            df = self.calculate_rsi(df)
-            df = self.calculate_macd(df)
-            df = self.calculate_moving_averages(df)
-            
-            # 최신 데이터 가져오기
-            latest = df.iloc[-1]
-            
-            # 분석 결과
-            result = {
-                'market': market,
-                'price': latest['close'],
-                'volume': latest['volume'],
-                'date': latest['date'],
-                'indicators': {
-                    'rsi': latest['rsi'],
-                    'macd': latest['macd'],
-                    'macd_signal': latest['macd_signal'],
-                    'macd_hist': latest['macd_hist'],
-                    'ma5': latest['ma5'],
-                    'ma20': latest['ma20'],
-                    'ma60': latest['ma60'],
-                    'ma120': latest['ma120'],
-                },
-                'signals': self.generate_signals(df)
-            }
-            
-            return result
-            
-        except Exception as e:
-            self.logger.error(f"시장 분석 실패: {str(e)}")
-            raise
-
-    def generate_signals(self, df: pd.DataFrame) -> Dict[str, bool]:
-        """
-        매매 신호 생성
-        
-        Args:
-            df: 분석된 캔들 데이터 DataFrame
-            
-        Returns:
-            Dict[str, bool]: 매매 신호
-        """
-        signals = {
-            'buy': False,
-            'sell': False,
-            'strong_buy': False,
-            'strong_sell': False
+        self.config = config
+        self.position_info = {
+            'market': '',
+            'entry_price': 0,
+            'amount': 0,
+            'top_price': 0,
+            'entry_time': None
         }
+    
+    def run_trading_analyzer(self, market: str = "KRW-BTC") -> bool:
+        """
+        매매 전략 실행
         
-        # 최신 데이터와 이전 데이터
-        current = df.iloc[-1]
-        previous = df.iloc[-2]
+        Args:
+            market: 마켓 코드 (기본값: KRW-BTC)
+            
+        Returns:
+            매수 시그널 여부
+        """
+        self.logger.info(f"{market} 매매 전략 분석 시작")
         
-        # RSI 기반 신호
-        if current['rsi'] < 30:
-            signals['buy'] = True
-        elif current['rsi'] > 70:
-            signals['sell'] = True
+        # 기술적 지표 계산
+        metrics = self._get_technical_metrics(market)
+        if not metrics:
+            self.logger.error(f"{market} 기술적 지표 계산 실패")
+            return False
+        
+        # 여기에 매수/매도 조건 확인 로직 구현
+        # 예: RSI, MACD, 볼린저 밴드 등을 활용한 매매 시그널 생성
+        # 아래는 예시 로직이며, 실제 전략에 맞게 수정 필요
+        
+        rsi = metrics.get('rsi', 0)
+        macd = metrics.get('macd', 0)
+        macd_signal = metrics.get('macd_signal', 0)
+        bb_upper = metrics.get('bb_upper', 0)
+        bb_lower = metrics.get('bb_lower', 0)
+        current_price = metrics.get('current_price', 0)
+        
+        # 매수 조건 예시 (RSI 과매도 + MACD 골든크로스)
+        buy_signal = (rsi < 30) and (macd > macd_signal) and (current_price < bb_lower * 1.02)
+        
+        if buy_signal:
+            self.logger.info(f"{market} 매수 시그널 발생: RSI={rsi}, MACD={macd}, MACD_SIGNAL={macd_signal}")
+        
+        return buy_signal
+    
+    def check_stop_loss_condition(self) -> bool:
+        """
+        손절 조건 체크
+        
+        Returns:
+            손절 시그널 여부
+        """
+        if not self.position_info['market']:
+            return False
             
-        # MACD 기반 신호
-        if current['macd'] > current['macd_signal'] and previous['macd'] <= previous['macd_signal']:
-            signals['buy'] = True
-        elif current['macd'] < current['macd_signal'] and previous['macd'] >= previous['macd_signal']:
-            signals['sell'] = True
+        market = self.position_info['market']
+        entry_price = self.position_info['entry_price']
+        top_price = self.position_info['top_price']
+        
+        # 현재가 조회
+        current_price_info = self.api.get_current_price(market)
+        if not current_price_info:
+            self.logger.error(f"{market} 현재가 조회 실패")
+            return False
             
-        # 이동 평균 기반 신호
-        if current['ma5'] > current['ma20'] and previous['ma5'] <= previous['ma20']:
-            signals['buy'] = True
-        elif current['ma5'] < current['ma20'] and previous['ma5'] >= previous['ma20']:
-            signals['sell'] = True
+        current_price = float(current_price_info.get('trade_price', 0))
+        
+        # 손절 조건 계산
+        loss_from_entry = (current_price - entry_price) / entry_price * 100
+        loss_from_top = (current_price - top_price) / top_price * 100
+        
+        # 손절 조건 예시 (매수가 대비 -5% 또는 최고가 대비 -3%)
+        stop_loss_threshold = self.config.get('stop_loss_threshold', -5.0)
+        trailing_stop_threshold = self.config.get('trailing_stop_threshold', -3.0)
+        
+        stop_loss_signal = (loss_from_entry <= stop_loss_threshold) or (loss_from_top <= trailing_stop_threshold)
+        
+        if stop_loss_signal:
+            self.logger.info(f"{market} 손절 시그널 발생: 매수가 대비 {loss_from_entry:.2f}%, 최고가 대비 {loss_from_top:.2f}%")
             
-        # 강한 매수/매도 신호 (여러 지표가 동시에 신호를 보낼 때)
-        if (current['rsi'] < 30 and 
-            current['macd'] > current['macd_signal'] and 
-            current['ma5'] > current['ma20']):
-            signals['strong_buy'] = True
+        return stop_loss_signal
+    
+    def _get_technical_metrics(self, market: str = "KRW-BTC", retry_count: int = 3) -> Dict[str, float]:
+        """
+        기술적 지표 계산
+        
+        Args:
+            market: 마켓 코드 (기본값: KRW-BTC)
+            retry_count: API 호출 재시도 횟수
             
-        if (current['rsi'] > 70 and 
-            current['macd'] < current['macd_signal'] and 
-            current['ma5'] < current['ma20']):
-            signals['strong_sell'] = True
-            
-        return signals 
+        Returns:
+            기술적 지표 딕셔너리
+        """
+        # 캔들 데이터 조회
+        for attempt in range(retry_count):
+            try:
+                candles = self.api.get_candles(market, interval="1d", count=100)
+                if not candles:
+                    self.logger.error(f"{market} 캔들 데이터 조회 실패 (시도 {attempt+1}/{retry_count})")
+                    continue
+                    
+                # 데이터프레임 변환
+                df = pd.DataFrame(candles)
+                df = df.sort_values(by='candle_date_time_utc')
+                
+                # 필요한 컬럼만 추출
+                df['close'] = df['trade_price'].astype(float)
+                df['high'] = df['high_price'].astype(float)
+                df['low'] = df['low_price'].astype(float)
+                df['open'] = df['opening_price'].astype(float)
+                df['volume'] = df['candle_acc_trade_volume'].astype(float)
+                
+                # 현재가
+                current_price = float(df['close'].iloc[-1])
+                
+                # RSI 계산 (14일)
+                delta = df['close'].diff()
+                gain = delta.where(delta > 0, 0)
+                loss = -delta.where(delta < 0, 0)
+                avg_gain = gain.rolling(window=14).mean()
+                avg_loss = loss.rolling(window=14).mean()
+                rs = avg_gain / avg_loss
+                rsi = 100 - (100 / (1 + rs))
+                
+                # MACD 계산
+                exp1 = df['close'].ewm(span=12, adjust=False).mean()
+                exp2 = df['close'].ewm(span=26, adjust=False).mean()
+                macd = exp1 - exp2
+                signal = macd.ewm(span=9, adjust=False).mean()
+                
+                # 볼린저 밴드 계산 (20일, 2표준편차)
+                ma20 = df['close'].rolling(window=20).mean()
+                std20 = df['close'].rolling(window=20).std()
+                bb_upper = ma20 + 2 * std20
+                bb_lower = ma20 - 2 * std20
+                
+                # 이동평균선 계산
+                ma20 = df['close'].rolling(window=20).mean()
+                ma50 = df['close'].rolling(window=50).mean()
+                ma200 = df['close'].rolling(window=200).mean()
+                
+                return {
+                    'current_price': current_price,
+                    'rsi': rsi.iloc[-1],
+                    'macd': macd.iloc[-1],
+                    'macd_signal': signal.iloc[-1],
+                    'bb_upper': bb_upper.iloc[-1],
+                    'bb_lower': bb_lower.iloc[-1],
+                    'ma20': ma20.iloc[-1],
+                    'ma50': ma50.iloc[-1],
+                    'ma200': ma200.iloc[-1]
+                }
+                
+            except Exception as e:
+                self.logger.error(f"{market} 기술적 지표 계산 중 오류 발생: {str(e)} (시도 {attempt+1}/{retry_count})")
+                
+        return {} 

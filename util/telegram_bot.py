@@ -83,10 +83,8 @@ class TelegramNotifier:
         quiet_start = datetime.datetime.strptime(self.quiet_start, '%H:%M').time()
         quiet_end = datetime.datetime.strptime(self.quiet_end, '%H:%M').time()
         
-        # 조용한 시간이 자정을 넘어가는 경우 (예: 22:00 ~ 08:00)
         if quiet_start > quiet_end:
             return now >= quiet_start or now <= quiet_end
-        # 조용한 시간이 같은 날 내에 있는 경우 (예: 01:00 ~ 06:00)
         else:
             return quiet_start <= now <= quiet_end
 
@@ -112,21 +110,24 @@ class TelegramNotifier:
             self.logger.debug(f"조용한 시간 ({self.quiet_start}~{self.quiet_end})에는 알림을 전송하지 않습니다.")
             return False
             
-        # 플랫폼 접두사 추가
-        formatted_message = f"[{self.platform}]\n{message}"
+        # 플랫폼 접두사 추가 - 일반 텍스트 형식 사용
+        platform_name = self.platform
+        if platform_name.lower() == 'kis':
+            platform_name = '한국투자증권'
+
+        formatted_message = f"[{platform_name}]\n{message}"
         
         try:
             url = f"https://api.telegram.org/bot{self.token}/sendMessage"
             payload: Dict[str, Any] = {
                 'chat_id': self.chat_id,
-                'text': formatted_message,
-                'parse_mode': 'Markdown'
+                'text': formatted_message
+                # parse_mode 파라미터 제거 (일반 텍스트로 전송)
             }
             
             response = requests.post(url, json=payload, timeout=10)  # 타임아웃 추가
             
             if response.status_code == 200:
-                self.logger.debug("텔레그램 메시지 전송 성공")
                 return True
             else:
                 self.logger.error(f"텔레그램 메시지 전송 실패: {response.text}")
@@ -177,24 +178,6 @@ class TelegramNotifier:
         
         if profit is not None:
             message += f"수익률: {emoji} {profit:.2f}%\n"
-            
-        message += f"\n{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        
-        return self.send_message(message)
-
-    def send_error_notification(self, error_message: str) -> bool:
-        """
-        오류 알림 전송
-        
-        Args:
-            error_message: 오류 메시지
-            
-        Returns:
-            bool: 전송 성공 여부
-        """
-        message = f"{CROSS_MARK} 오류 발생\n\n"
-        message += f"{error_message}\n"
-        message += f"\n{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         
         return self.send_message(message)
 
@@ -209,8 +192,7 @@ class TelegramNotifier:
         Returns:
             bool: 전송 성공 여부
         """
-        message = f"{GEAR} {title}\n\n"
+        message = f"{GEAR} {title} {GEAR}\n"
         message += f"{message_body}\n"
-        message += f"\n{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         
         return self.send_message(message) 
