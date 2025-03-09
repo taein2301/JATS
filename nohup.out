@@ -1,0 +1,129 @@
+[32m[2025-03-10 00:57:24][INFO]Upbit 트레이더 초기화 완료 [trader.py:63][0m
+Traceback (most recent call last):
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/main.py", line 44, in main
+    notifier.send_system_notification("트레이더 실행 시작", f"{platform} 트레이더가 {env} 환경에서 시작되었습니다.")
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/util/telegram_bot.py", line 198, in send_system_notification
+    return self.send_message(message) 
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/util/telegram_bot.py", line 128, in send_message
+    response = requests.post(url, json=payload, timeout=10)  # 타임아웃 추가
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/requests/api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/requests/sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/requests/sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/requests/adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 449, in _make_request
+    six.raise_from(e, None)
+  File "<string>", line 3, in raise_from
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 444, in _make_request
+    httplib_response = conn.getresponse()
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/http/client.py", line 1349, in getresponse
+    response.begin()
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/http/client.py", line 316, in begin
+    version, status, reason = self._read_status()
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/http/client.py", line 277, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/socket.py", line 704, in readinto
+    return self._sock.recv_into(b)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/ssl.py", line 1241, in recv_into
+    return self.read(nbytes, buffer)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/ssl.py", line 1099, in read
+    return self._sslobj.read(len, buffer)
+KeyboardInterrupt
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/main.py", line 60, in <module>
+    main() 
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/main.py", line 48, in main
+    notifier.send_system_notification("프로그램 종료", f"{platform} {env} 프로그램이 KeyboardInterrupt 예외로 종료되었습니다.")
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/util/telegram_bot.py", line 198, in send_system_notification
+    return self.send_message(message) 
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/util/telegram_bot.py", line 128, in send_message
+    response = requests.post(url, json=payload, timeout=10)  # 타임아웃 추가
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/requests/api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/requests/sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/requests/sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/requests/adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 386, in _make_request
+    self._validate_conn(conn)
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/urllib3/connectionpool.py", line 1042, in _validate_conn
+    conn.connect()
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/urllib3/connection.py", line 419, in connect
+    self.sock = ssl_wrap_socket(
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/urllib3/util/ssl_.py", line 449, in ssl_wrap_socket
+    ssl_sock = _ssl_wrap_socket_impl(
+  File "/Users/jklee/Dropbox/Source/jklee/JATS/jats_venv/lib/python3.9/site-packages/urllib3/util/ssl_.py", line 493, in _ssl_wrap_socket_impl
+    return ssl_context.wrap_socket(sock, server_hostname=server_hostname)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/ssl.py", line 500, in wrap_socket
+    return self.sslsocket_class._create(
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/ssl.py", line 1040, in _create
+    self.do_handshake()
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/ssl.py", line 1309, in do_handshake
+    self._sslobj.do_handshake()
+KeyboardInterrupt
+[32m[2025-03-10 00:57:28][INFO]Upbit 트레이더 초기화 완료 [trader.py:63][0m
+[32m[2025-03-10 00:57:30][INFO]🚀 Upbit 트레이더 실행 시작 [trader.py:72][0m
+[32m[2025-03-10 00:57:30][INFO]⚙️ 설정 정보: 리스크 설정 - 손절 비율: 1% [trader.py:73][0m
+[32m[2025-03-10 00:57:30][INFO]⚙️ 설정 정보: 최고가 대비 손절 비율: 0.5% [trader.py:74][0m
+[32m[2025-03-10 00:57:31][INFO]🕐 시작 시간: 2025-03-10 00:57:31 [trader.py:79][0m
+[32m[2025-03-10 00:57:31][INFO]🔍 초기 포지션 체크 중... [trader.py:83][0m
+[36m[2025-03-10 00:57:31][DEBUG]🔍 현재 포지션 상태 확인 중... [trader.py:442][0m
+[32m[2025-03-10 00:57:31][INFO]💰 포트폴리오 분석 시작 [trader.py:651][0m
+[36m[2025-03-10 00:57:31][DEBUG]🔍 잔고 정보 조회 중... [trader.py:654][0m
+[36m[2025-03-10 00:57:31][DEBUG]📝 총 0개 자산 정보 조회 완료 [trader.py:656][0m
+[32m[2025-03-10 00:57:31][INFO]💰 총 평가금액: 0원 [trader.py:715][0m
+[32m[2025-03-10 00:57:31][INFO]✅ 포트폴리오 분석 완료 [trader.py:750][0m
+[32m[2025-03-10 00:57:33][INFO]⏱️ 메인 루프 시작 [trader.py:88][0m
+[32m[2025-03-10 00:58:06][INFO]Upbit 트레이더 초기화 완료 [trader.py:63][0m
+[32m[2025-03-10 00:58:08][INFO]🚀 Upbit 트레이더 실행 시작 [trader.py:72][0m
+[32m[2025-03-10 00:58:08][INFO]⚙️ 설정 정보: 리스크 설정 - 손절 비율: 1% [trader.py:73][0m
+[32m[2025-03-10 00:58:08][INFO]⚙️ 설정 정보: 최고가 대비 손절 비율: 0.5% [trader.py:74][0m
+[32m[2025-03-10 00:58:09][INFO]🕐 시작 시간: 2025-03-10 00:58:09 [trader.py:79][0m
+[32m[2025-03-10 00:58:09][INFO]🔍 초기 포지션 체크 중... [trader.py:83][0m
+[36m[2025-03-10 00:58:09][DEBUG]🔍 현재 포지션 상태 확인 중... [trader.py:442][0m
+[32m[2025-03-10 00:58:09][INFO]💰 포트폴리오 분석 시작 [trader.py:651][0m
+[36m[2025-03-10 00:58:09][DEBUG]🔍 잔고 정보 조회 중... [trader.py:654][0m
+[36m[2025-03-10 00:58:09][DEBUG]📝 총 0개 자산 정보 조회 완료 [trader.py:656][0m
+[32m[2025-03-10 00:58:09][INFO]💰 총 평가금액: 0원 [trader.py:715][0m
+[32m[2025-03-10 00:58:09][INFO]✅ 포트폴리오 분석 완료 [trader.py:750][0m
+[32m[2025-03-10 00:58:11][INFO]⏱️ 메인 루프 시작 [trader.py:88][0m
+[32m[2025-03-10 00:58:22][INFO]❌ 사용자에 의해 트레이더가 중지되었습니다. [trader.py:154][0m
+[36m[2025-03-10 00:59:07][DEBUG]⏱️ 1분 주기 작업 실행 [trader.py:118][0m
+[36m[2025-03-10 00:59:07][DEBUG]🔍 매수/매도 시그널 체크 중... [trader.py:121][0m
+[36m[2025-03-10 00:59:07][DEBUG]🔍 매수 시그널 체크 중... [trader.py:420][0m
+[33m[2025-03-10 00:59:07][WARNING]⚠️ 거래량 상위 코인 목록이 비어 있어 매수 시그널을 체크할 수 없습니다. [trader.py:424][0m
+[36m[2025-03-10 00:59:07][DEBUG]🔍 비정상 주문 체크 중... [trader.py:125][0m
+[36m[2025-03-10 00:59:07][DEBUG]🔍 미체결 주문 확인 중... 전체 마켓 [trader.py:354][0m
+[36m[2025-03-10 00:59:07][DEBUG]✅ 미체결 주문이 없습니다. [trader.py:360][0m
+[32m[2025-03-10 00:59:50][INFO]⏱️ 트레이더 실행 중: 0일 0시간 1분 41초 경과 (반복 횟수: 100) [trader.py:102][0m
+[36m[2025-03-10 01:00:07][DEBUG]⏱️ 1분 주기 작업 실행 [trader.py:118][0m
+[36m[2025-03-10 01:00:07][DEBUG]🔍 매수/매도 시그널 체크 중... [trader.py:121][0m
+[36m[2025-03-10 01:00:07][DEBUG]🔍 매수 시그널 체크 중... [trader.py:420][0m
+[33m[2025-03-10 01:00:07][WARNING]⚠️ 거래량 상위 코인 목록이 비어 있어 매수 시그널을 체크할 수 없습니다. [trader.py:424][0m
+[36m[2025-03-10 01:00:07][DEBUG]🔍 비정상 주문 체크 중... [trader.py:125][0m
+[36m[2025-03-10 01:00:07][DEBUG]🔍 미체결 주문 확인 중... 전체 마켓 [trader.py:354][0m
+[36m[2025-03-10 01:00:08][DEBUG]✅ 미체결 주문이 없습니다. [trader.py:360][0m
+[36m[2025-03-10 01:01:08][DEBUG]⏱️ 1분 주기 작업 실행 [trader.py:118][0m
+[36m[2025-03-10 01:01:08][DEBUG]🔍 매수/매도 시그널 체크 중... [trader.py:121][0m
+[36m[2025-03-10 01:01:08][DEBUG]🔍 매수 시그널 체크 중... [trader.py:420][0m
+[33m[2025-03-10 01:01:08][WARNING]⚠️ 거래량 상위 코인 목록이 비어 있어 매수 시그널을 체크할 수 없습니다. [trader.py:424][0m
+[36m[2025-03-10 01:01:08][DEBUG]🔍 비정상 주문 체크 중... [trader.py:125][0m
+[36m[2025-03-10 01:01:08][DEBUG]🔍 미체결 주문 확인 중... 전체 마켓 [trader.py:354][0m
+[36m[2025-03-10 01:01:08][DEBUG]✅ 미체결 주문이 없습니다. [trader.py:360][0m
+[32m[2025-03-10 01:01:31][INFO]⏱️ 트레이더 실행 중: 0일 0시간 3분 21초 경과 (반복 횟수: 200) [trader.py:102][0m
