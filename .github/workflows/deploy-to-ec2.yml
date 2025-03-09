@@ -1,0 +1,133 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 리포지토리 코드 체크아웃
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. SSH 키 설정
+      - name: Setup SSH Key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
+      # 3. EC2에 배포 (rsync 또는 SCP 사용 가능)
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            # EC2 내에서 실행할 명령어
+            cd /home/${{ secrets.EC2_USER }}/JATS
+
+            if pgrep -f "python main.py"; then
+              pkill -f "python main.py"
+              echo "기존 프로세스가 중지되었습니다."
+            fi
+            
+            # 최신 코드 가져오기
+            git pull
+            
+            # 가상환경 설정 (없으면 생성)
+            if [ ! -d "jats_venv" ]; then
+              python3 -m venv jats_venv
+              echo "가상환경이 생성되었습니다."
+            fi
+            
+            # 가상환경 활성화 및 의존성 설치
+            source jats_venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            
+            # 설정 파일 확인 및 복사
+            if [ ! -f "prod_config.yaml" ]; then
+              echo "경고: prod_config.yaml 파일이 없습니다."
+              if [ -f "sample_config.yaml" ]; then
+                cp sample_config.yaml prod_config.yaml
+                echo "sample_config.yaml을 prod_config.yaml로 복사했습니다."
+              fi
+            fi
+            
+            # 로그 디렉토리 생성
+            mkdir -p logs
+            
+            # 애플리케이션 실행 (백그라운드로)
+            nohup python main.py --platform=upbit --env=prod &
+
+            EOF
+
+      # 4. 임시 파일 삭제
+      - name: Cleanup
+        run: rm -f private_key.pem 
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
