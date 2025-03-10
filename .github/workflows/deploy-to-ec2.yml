@@ -27,11 +27,6 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             # EC2 내에서 실행할 명령어
             cd /home/${{ secrets.EC2_USER }}/JATS
-
-            if pgrep -f "python main.py"; then
-              pkill -f "python main.py"
-              echo "기존 프로세스가 중지되었습니다."
-            fi
             
             # 최신 코드 가져오기
             git pull
@@ -48,7 +43,7 @@ jobs:
             pip install -r requirements.txt
             
             # 애플리케이션 실행 (백그라운드로)
-            ~/TOOL/start.sh 
+            ~/TOOL/restart.sh 
 
           EOF
 
