@@ -48,8 +48,7 @@ jobs:
             pip install -r requirements.txt
             
             # 애플리케이션 실행 (백그라운드로)
-            chmod +x run_prod.sh
-            ./run_prod.sh 
+            ~/TOOL/start.sh 
 
           EOF
 
