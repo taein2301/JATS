@@ -43,7 +43,7 @@ jobs:
             pip install -r requirements.txt
             
             # 애플리케이션 실행 (백그라운드로)
-            ~/TOOL/restart.sh 
+            ~/TOOL/restart.sh >> /home/ubuntu/JATS/log/upbit-$(date +%Y%m%d).log
 
           EOF
 
