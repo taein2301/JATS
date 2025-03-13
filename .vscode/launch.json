@@ -1,0 +1,14 @@
+{
+    "version": "0.3.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Python File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py", // 실행할 파일 경로
+            "args": ["upbit", "dev"], // 프로그램에 전달할 인수
+            "console": "integratedTerminal" // 출력 위치 (integratedTerminal, externalTerminal 등)
+            // sample  "env": {"PYTHONPATH": "${workspaceFolder}"} // 환경 변수
+        }
+    ]
+}
