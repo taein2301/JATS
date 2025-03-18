@@ -88,13 +88,12 @@ class TelegramNotifier:
         else:
             return quiet_start <= now <= quiet_end
 
-    def send_message(self, message: str, is_shutdown: bool = False) -> bool:
+    def send_message(self, message: str) -> bool:
         """
         텔레그램으로 메시지 전송
         
         Args:
             message: 전송할 메시지
-            is_shutdown: 프로그램 종료 메시지 여부
             
         Returns:
             bool: 전송 성공 여부
@@ -103,10 +102,8 @@ class TelegramNotifier:
             self.logger.debug("텔레그램 알림이 비활성화되어 있습니다.")
             return False
             
-        self.is_shutdown_message = is_shutdown
-        
         # 조용한 시간에는 메시지 전송하지 않음 (종료 메시지 제외)
-        if self._is_quiet_time() and not is_shutdown:
+        if self._is_quiet_time():
             self.logger.debug(f"조용한 시간 ({self.quiet_start}~{self.quiet_end})에는 알림을 전송하지 않습니다.")
             return False
             
@@ -138,61 +135,4 @@ class TelegramNotifier:
             return False
         except Exception as e:
             self.logger.exception(f"텔레그램 메시지 전송 중 오류 발생: {str(e)}")
-            return False
-
-    def send_trade_notification(self, action: str, symbol: str, price: float, 
-                               amount: float, total: float, profit: Optional[float] = None) -> bool:
-        """
-        거래 알림 전송
-        
-        Args:
-            action: 거래 유형 (매수/매도)
-            symbol: 종목 심볼
-            price: 거래 가격
-            amount: 거래 수량
-            total: 총 거래 금액
-            profit: 수익률 (매도 시)
-            
-        Returns:
-            bool: 전송 성공 여부
-        """
-        emoji = MONEY_BAG
-        
-        if action == "매수":
-            title = f"{BELL} 매수 체결"
-        elif action == "매도":
-            title = f"{BELL} 매도 체결"
-            if profit is not None:
-                if profit > 0:
-                    emoji = UP_ARROW
-                else:
-                    emoji = DOWN_ARROW
-        else:
-            title = f"{BELL} 거래 알림"
-            
-        message = f"{title}\n\n"
-        message += f"종목: {symbol}\n"
-        message += f"가격: {price:,.0f}원\n"
-        message += f"수량: {amount:.4f}\n"
-        message += f"총액: {total:,.0f}원\n"
-        
-        if profit is not None:
-            message += f"수익률: {emoji} {profit:.2f}%\n"
-        
-        return self.send_message(message)
-
-    def send_system_notification(self, title: str, message_body: str) -> bool:
-        """
-        시스템 알림 전송
-        
-        Args:
-            title: 알림 제목
-            message_body: 알림 내용
-            
-        Returns:
-            bool: 전송 성공 여부
-        """
-        message = f"{GEAR} {title} {GEAR}\n"
-        message += f"{message_body}\n"
-        
-        return self.send_message(message) 
+            return False 

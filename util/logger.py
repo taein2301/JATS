@@ -50,7 +50,6 @@ class Logger:
         # 로그 포맷 설정
         log_format = '[%(asctime)s][%(levelname)s]%(message)s [%(filename)s:%(lineno)d]'
         date_format = '%Y-%m-%d %H:%M:%S'
-
         # 로그 출력 대상 설정
         output_targets: List[str] = config.get('logging.output', ['file', 'console'])
 
@@ -96,6 +95,8 @@ class Logger:
             logger.addHandler(file_handler)
 
         cls._loggers[name] = logger
+        # 로그 레벨 정보 출력
+        logger.info(f"로거 '{name}' 초기화 완료 - 로그 레벨: {log_level_str}")
         return logger
 
 

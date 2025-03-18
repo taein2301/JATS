@@ -26,13 +26,13 @@ class UpbitAnalyzer:
         self.api = api
         self.logger = logger
         self.config = config
-        self.position_info = {
-            'market': '',
-            'entry_price': 0,
-            'amount': 0,
-            'top_price': 0,
-            'entry_time': None
-        }
+        
+        # 리스크 관리 설정
+        self.stop_loss_percent = self.config.get('risk.stop_loss_percent', 3.0)
+        self.stop_loss_percent_high = self.config.get('risk.stop_loss_percent_high', 2.0)
+        
+        if self.logger:
+            self.logger.info(f"리스크 관리 파라미터 설정 - 기본 손절: {self.stop_loss_percent}%, 최고가 대비 손절: {self.stop_loss_percent_high}%")
     
     def run_trading_analyzer(self, market: str = "KRW-BTC") -> bool:
         """
@@ -44,70 +44,98 @@ class UpbitAnalyzer:
         Returns:
             매수 시그널 여부
         """
-        self.logger.info(f"{market} 매매 전략 분석 시작")
         
-        # 기술적 지표 계산
-        metrics = self._get_technical_metrics(market)
-        if not metrics:
-            self.logger.error(f"{market} 기술적 지표 계산 실패")
+        try:
+            # 기술적 지표 계산
+            metrics = self._get_technical_metrics(market)
+            if not metrics:
+                self.logger.error(f"{market} 기술적 지표 계산 실패")
+                return False
+            
+            # 매수 조건 확인 (예시)
+            rsi = metrics.get('rsi', 50)
+            macd = metrics.get('macd', 0)
+            macd_signal = metrics.get('macd_signal', 0)
+            
+            # 매수 시그널 (RSI 30 이하이고 MACD가 시그널 라인을 상향 돌파)
+            buy_signal = rsi < 30 and macd > macd_signal and macd > 0
+            
+            # 마켓 한글 이름 가져오기
+            market_korean_name = self.api.get_market_name().get(market, market)
+            
+            if buy_signal:
+                self.logger.info(f"{market}({market_korean_name}) 매수 시그널 발생: RSI={rsi:.2f}, MACD={macd:.2f}, MACD_SIGNAL={macd_signal:.2f}")
+            else:
+                self.logger.info(f"{market}({market_korean_name}) 매수 시그널 발생 안됨 - RSI={rsi:.2f}, MACD={macd:.2f}, MACD_SIGNAL={macd_signal:.2f}")
+            
+            return buy_signal
+            
+        except Exception as e:
+            self.logger.error(f"매매 전략 분석 중 오류 발생: {str(e)}")
             return False
-        
-        # 여기에 매수/매도 조건 확인 로직 구현
-        # 예: RSI, MACD, 볼린저 밴드 등을 활용한 매매 시그널 생성
-        # 아래는 예시 로직이며, 실제 전략에 맞게 수정 필요
-        
-        rsi = metrics.get('rsi', 0)
-        macd = metrics.get('macd', 0)
-        macd_signal = metrics.get('macd_signal', 0)
-        bb_upper = metrics.get('bb_upper', 0)
-        bb_lower = metrics.get('bb_lower', 0)
-        current_price = metrics.get('current_price', 0)
-        
-        # 매수 조건 예시 (RSI 과매도 + MACD 골든크로스)
-        buy_signal = (rsi < 30) and (macd > macd_signal) and (current_price < bb_lower * 1.02)
-        
-        if buy_signal:
-            self.logger.info(f"{market} 매수 시그널 발생: RSI={rsi}, MACD={macd}, MACD_SIGNAL={macd_signal}")
-        
-        return buy_signal
     
-    def check_stop_loss_condition(self) -> bool:
+    def check_stop_loss_condition(self, position: Dict[str, Any]) -> bool:
         """
         손절 조건 체크
         
+        Args:
+            position: 포지션 정보 딕셔너리
+            
         Returns:
             손절 시그널 여부
         """
-        if not self.position_info['market']:
+        try:
+            market = position.get('market', '')
+            if not market:
+                self.logger.warning("손절 조건 체크: 마켓 정보가 없습니다.")
+                return False
+                
+            entry_price = position.get('entry_price', 0)
+            if entry_price <= 0:
+                self.logger.warning(f"{market} 손절 조건 체크: 진입 가격이 유효하지 않습니다. (진입가: {entry_price})")
+                return False
+                
+            # 현재가 조회
+            current_price_info = self.api.get_current_price(market)
+            if not current_price_info:
+                self.logger.error(f"{market} 현재가 조회 실패")
+                return False
+                
+            current_price = float(current_price_info.get('trade_price', 0))
+            
+            if current_price <= 0:
+                return False
+                
+            # 최고가 갱신
+            top_price = position.get('top_price', 0)
+            if current_price > top_price:
+                top_price = current_price
+                
+            # 손실률 계산
+            loss_rate = (current_price - entry_price) / entry_price * 100
+            high_loss_rate = (current_price - top_price) / top_price * 100
+            
+            # 손절 조건 확인
+            # 기본 손절 조건: 진입가 대비 손실률이 설정된 손절 퍼센트보다 낮을 때
+            stop_loss = loss_rate <= self.stop_loss_percent
+            stop_loss_from_high = high_loss_rate <= self.stop_loss_percent_high
+            
+            market_korean_name = self.api.get_market_name().get(market, market)
+            change_emoji = "📈" if loss_rate > 0 else "📉"
+            value_krw = position.get('value_krw', 0)
+            if stop_loss:
+                self.logger.info(f"{market} ({market_korean_name}) {change_emoji} 기본 손절 조건 충족: 손실률={loss_rate:.2f}%, 평가금액={value_krw:,.0f}원")
+            elif stop_loss_from_high:
+                self.logger.info(f"{market} ({market_korean_name}) {change_emoji} 최고가 대비 손절 조건 충족: 최고가 대비 하락률={high_loss_rate:.2f}%, 평가금액={value_krw:,.0f}원")
+            else:
+                self.logger.info(f"{market} ({market_korean_name}) {change_emoji} 평가금액={value_krw:,.0f}원 수익률: {loss_rate:.2f}%, 최고가 대비 하락률 ( 1% 이상 ) : {high_loss_rate:.2f}%")
+
+            return stop_loss or stop_loss_from_high
+            
+        except Exception as e:
+            self.logger.error(f"손절 조건 체크 중 오류 발생: {str(e)}")
             return False
-            
-        market = self.position_info['market']
-        entry_price = self.position_info['entry_price']
-        top_price = self.position_info['top_price']
-        
-        # 현재가 조회
-        current_price_info = self.api.get_current_price(market)
-        if not current_price_info:
-            self.logger.error(f"{market} 현재가 조회 실패")
-            return False
-            
-        current_price = float(current_price_info.get('trade_price', 0))
-        
-        # 손절 조건 계산
-        loss_from_entry = (current_price - entry_price) / entry_price * 100
-        loss_from_top = (current_price - top_price) / top_price * 100
-        
-        # 손절 조건 예시 (매수가 대비 -5% 또는 최고가 대비 -3%)
-        stop_loss_threshold = self.config.get('stop_loss_threshold', -5.0)
-        trailing_stop_threshold = self.config.get('trailing_stop_threshold', -3.0)
-        
-        stop_loss_signal = (loss_from_entry <= stop_loss_threshold) or (loss_from_top <= trailing_stop_threshold)
-        
-        if stop_loss_signal:
-            self.logger.info(f"{market} 손절 시그널 발생: 매수가 대비 {loss_from_entry:.2f}%, 최고가 대비 {loss_from_top:.2f}%")
-            
-        return stop_loss_signal
-    
+
     def _get_technical_metrics(self, market: str = "KRW-BTC", retry_count: int = 3) -> Dict[str, float]:
         """
         기술적 지표 계산
@@ -119,9 +147,9 @@ class UpbitAnalyzer:
         Returns:
             기술적 지표 딕셔너리
         """
-        # 캔들 데이터 조회
         for attempt in range(retry_count):
             try:
+                # 캔들 데이터 조회
                 candles = self.api.get_candles(market, interval="1d", count=100)
                 if not candles:
                     self.logger.error(f"{market} 캔들 데이터 조회 실패 (시도 {attempt+1}/{retry_count})")

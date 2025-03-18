@@ -7,6 +7,7 @@ import jwt
 import uuid
 import hashlib
 from urllib.parse import urlencode
+import sys
 
 
 class UpbitAPI:
@@ -14,7 +15,7 @@ class UpbitAPI:
     Upbit API 호출을 담당하는 클래스
     """
     
-    def __init__(self, access_key: str, secret_key: str, server_url: str = "https://api.upbit.com", logger=None):
+    def __init__(self, access_key: str, secret_key: str, server_url: str = "https://api.upbit.com", logger=None, notifier=None):
         """
         Upbit API 클래스 초기화
         
@@ -23,11 +24,13 @@ class UpbitAPI:
             secret_key: Upbit API 시크릿 키
             server_url: Upbit API 서버 URL
             logger: 로깅을 위한 로거 객체
+            notifier: 텔레그램 알림을 위한 객체
         """
         self.access_key = access_key
         self.secret_key = secret_key
         self.server_url = server_url
         self.logger = logger
+        self.notifier = notifier
     
     def _get_auth_header(self, query_params: Optional[Dict] = None) -> Dict:
         """
@@ -53,6 +56,33 @@ class UpbitAPI:
         
         return {"Authorization": authorization}
     
+    def _handle_api_error(self, operation: str, status_code: int, response_text: str, error_msg: str = None):
+        """
+        API 오류 처리 및 알림
+        
+        Args:
+            operation: 수행 중이던 작업 설명
+            status_code: HTTP 상태 코드
+            response_text: API 응답 텍스트
+            error_msg: 추가 오류 메시지
+        """
+        error_message = f"{operation} 실패 - 상태 코드: {status_code}, 응답: {response_text}"
+        if error_msg:
+            error_message += f", 오류: {error_msg}"
+            
+        if self.logger:
+            self.logger.error(error_message)
+            
+        # 심각한 API 오류인 경우 프로그램 종료
+        if status_code >= 500 or status_code == 401:
+            if self.logger:
+                self.logger.critical(f"심각한 API 오류로 프로그램을 종료합니다: {error_message}")
+            if self.notifier:
+                self.notifier.send_message("🔥 심각한 API 오류\n" + f"심각한 API 오류로 프로그램을 종료합니다: {error_message}")
+            sys.exit(1)
+            
+        return {}
+    
     def get_current_price(self, ticker_name: str = "KRW-BTC") -> Dict:
         """
         특정 코인의 현재가를 조회
@@ -64,7 +94,7 @@ class UpbitAPI:
             현재가 정보 딕셔너리
         """
         if self.logger:
-            self.logger.info(f"현재가 조회 시작 - 티커: {ticker_name}")
+            self.logger.debug(f"현재가 조회 시작 - 티커: {ticker_name}")
             
         url = f"{self.server_url}/v1/ticker"
         params = {'markets': ticker_name}
@@ -83,22 +113,17 @@ class UpbitAPI:
             if response.status_code == 200:
                 result = response.json()
                 if result and len(result) > 0:
-                    if self.logger:
-                        self.logger.info(f"현재가 조회 성공 - 티커: {ticker_name}, 가격: {result[0].get('trade_price')}")
                     return result[0]
                 else:
-                    if self.logger:
-                        self.logger.warning(f"현재가 조회 결과 없음 - 티커: {ticker_name}")
-                    return {}
+                    raise Exception(f"현재가 조회 결과 없음 - 티커: {ticker_name}")
             else:
-                if self.logger:
-                    self.logger.error(f"현재가 조회 실패 - 상태 코드: {response.status_code}, 응답: {response.text}")
-                return {}
+                return self._handle_api_error(f"현재가 조회 ({ticker_name})", response.status_code, response.text)
         except Exception as e:
+            error_msg = f"현재가 조회 중 예외 발생: {str(e)}"
             if self.logger:
-                self.logger.error(f"현재가 조회 중 예외 발생: {str(e)}")
-            return {}
-    
+                self.logger.error(error_msg)
+            raise
+
     def get_candles(self, market: str, interval: str = "1d", count: int = 200, to: Optional[str] = None) -> List[Dict]:
         """
         캔들 데이터 조회
@@ -133,9 +158,19 @@ class UpbitAPI:
             params['to'] = to
             
         headers = self._get_auth_header(params)
-        response = requests.get(url, params=params, headers=headers)
         
-        return response.json() if response.status_code == 200 else []
+        try:
+            response = requests.get(url, params=params, headers=headers)
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return self._handle_api_error(f"캔들 데이터 조회 ({market}, {interval})", response.status_code, response.text)
+        except Exception as e:
+            error_msg = f"캔들 데이터 조회 중 예외 발생: {str(e)}"
+            if self.logger:
+                self.logger.error(error_msg)
+            raise
     
     def run_order(self, market: str, side: str, volume: Optional[float] = None, price: Optional[float] = None) -> Dict:
         """
@@ -153,11 +188,10 @@ class UpbitAPI:
         order_type = "매수" if side == "bid" else "매도"
         
         if self.logger:
-            self.logger.info(f"{order_type} 주문 실행 시작 - 마켓: {market}, 타입: {order_type}")
             if side == "bid":
-                self.logger.info(f"매수 금액: {price} KRW")
+                self.logger.info(f"{order_type} 주문 실행 시작 - 마켓: {market}, 타입: {order_type} 금액: {price} KRW")
             else:
-                self.logger.info(f"매도 수량: {volume}")
+                self.logger.info(f"{order_type} 주문 실행 시작 - 마켓: {market}, 타입: {order_type} 수량: {volume}")
                 
         url = f"{self.server_url}/v1/orders"
         
@@ -176,7 +210,7 @@ class UpbitAPI:
             else:
                 error_msg = "매수 시 price, 매도 시 volume이 필요합니다."
                 if self.logger:
-                    self.logger.error(f"주문 실패 - {error_msg}")
+                    self.logger.error(error_msg)
                 raise ValueError(error_msg)
             
             if self.logger:
@@ -192,17 +226,16 @@ class UpbitAPI:
             if response.status_code == 201:
                 result = response.json()
                 if self.logger:
-                    self.logger.info(f"{order_type} 주문 성공 - UUID: {result.get('uuid')}, 마켓: {result.get('market')}")
+                    self.logger.debug(f"{order_type} 주문 성공 - UUID: {result.get('uuid')}, 마켓: {result.get('market')}")
                     self.logger.debug(f"주문 상세 정보: {result}")
                 return result
             else:
-                if self.logger:
-                    self.logger.error(f"{order_type} 주문 실패 - 상태 코드: {response.status_code}, 응답: {response.text}")
-                return {}
+                return self._handle_api_error(f"{order_type} 주문 ({market})", response.status_code, response.text)
         except Exception as e:
+            error_msg = f"{order_type} 주문 중 예외 발생: {str(e)}"
             if self.logger:
-                self.logger.error(f"{order_type} 주문 중 예외 발생: {str(e)}")
-            return {}
+                self.logger.error(error_msg)
+            raise
     
     def get_order_status(self, uuid: str) -> Dict:
         """
@@ -218,8 +251,18 @@ class UpbitAPI:
         params = {'uuid': uuid}
         headers = self._get_auth_header(params)
         
-        response = requests.get(url, params=params, headers=headers)
-        return response.json() if response.status_code == 200 else {}
+        try:
+            response = requests.get(url, params=params, headers=headers)
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return self._handle_api_error(f"주문 상태 조회 ({uuid})", response.status_code, response.text)
+        except Exception as e:
+            error_msg = f"주문 상태 조회 중 예외 발생: {str(e)}"
+            if self.logger:
+                self.logger.error(error_msg)
+            raise
     
     def set_order_cancel(self, uuid: str) -> Dict:
         """
@@ -235,8 +278,18 @@ class UpbitAPI:
         params = {'uuid': uuid}
         headers = self._get_auth_header(params)
         
-        response = requests.delete(url, params=params, headers=headers)
-        return response.json() if response.status_code == 200 else {}
+        try:
+            response = requests.delete(url, params=params, headers=headers)
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return self._handle_api_error(f"주문 취소 ({uuid})", response.status_code, response.text)
+        except Exception as e:
+            error_msg = f"주문 취소 중 예외 발생: {str(e)}"
+            if self.logger:
+                self.logger.error(error_msg)
+            raise
     
     def get_wait_order(self, market: Optional[str] = None) -> List[Dict]:
         """
@@ -248,8 +301,6 @@ class UpbitAPI:
         Returns:
             대기 중인 주문 리스트
         """
-        if self.logger:
-            self.logger.info(f"대기 중인 주문 조회 시작 - 마켓: {market if market else '전체'}")
             
         url = f"{self.server_url}/v1/orders"
         params = {'state': 'wait'}
@@ -278,13 +329,12 @@ class UpbitAPI:
                             self.logger.debug(f"주문 정보: 마켓={order.get('market')}, UUID={order.get('uuid')}, 타입={order.get('side')}, 가격={order.get('price')}, 수량={order.get('volume')}")
                 return result
             else:
-                if self.logger:
-                    self.logger.error(f"대기 중인 주문 조회 실패 - 상태 코드: {response.status_code}, 응답: {response.text}")
-                return []
+                return self._handle_api_error("대기 중인 주문 조회", response.status_code, response.text)
         except Exception as e:
+            error_msg = f"대기 중인 주문 조회 중 예외 발생: {str(e)}"
             if self.logger:
-                self.logger.error(f"대기 중인 주문 조회 중 예외 발생: {str(e)}")
-            return []
+                self.logger.error(error_msg)
+            raise
     
     def get_closed_orders(self, market: str, to: Optional[str] = None, 
                          page: int = 1, limit: int = 100, 
@@ -315,9 +365,19 @@ class UpbitAPI:
             params['to'] = to
             
         headers = self._get_auth_header(params)
-        response = requests.get(url, params=params, headers=headers)
         
-        return response.json() if response.status_code == 200 else []
+        try:
+            response = requests.get(url, params=params, headers=headers)
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return self._handle_api_error(f"종료된 주문 내역 조회 ({market})", response.status_code, response.text)
+        except Exception as e:
+            error_msg = f"종료된 주문 내역 조회 중 예외 발생: {str(e)}"
+            if self.logger:
+                self.logger.error(error_msg)
+            raise
     
     def get_balances(self) -> List[Dict]:
         """
@@ -326,9 +386,6 @@ class UpbitAPI:
         Returns:
             보유 자산 리스트
         """
-        if self.logger:
-            self.logger.info("보유 자산 잔고 조회 시작")
-            
         url = f"{self.server_url}/v1/accounts"
         headers = self._get_auth_header()
         
@@ -343,20 +400,14 @@ class UpbitAPI:
                 
             if response.status_code == 200:
                 result = response.json()
-                if self.logger:
-                    self.logger.info(f"보유 자산 잔고 조회 성공 - 자산 수: {len(result)}")
-                    for balance in result:
-                        if float(balance.get('balance', 0)) > 0:
-                            self.logger.debug(f"자산 정보: 화폐={balance.get('currency')}, 잔고={balance.get('balance')}, 평가금액={balance.get('avg_buy_price', '0')}원")
                 return result
             else:
-                if self.logger:
-                    self.logger.error(f"보유 자산 잔고 조회 실패 - 상태 코드: {response.status_code}, 응답: {response.text}")
-                return []
+                return self._handle_api_error("보유 자산 잔고 조회", response.status_code, response.text)
         except Exception as e:
+            error_msg = f"보유 자산 잔고 조회 중 예외 발생: {str(e)}"
             if self.logger:
-                self.logger.error(f"보유 자산 잔고 조회 중 예외 발생: {str(e)}")
-            return []
+                self.logger.error(error_msg)
+            raise
     
     def get_market_info(self) -> List[Dict]:
         """
@@ -369,12 +420,20 @@ class UpbitAPI:
         params = {'isDetails': 'true'}
         headers = self._get_auth_header(params)
         
-        response = requests.get(url, params=params, headers=headers)
-        if response.status_code == 200:
-            markets = response.json()
-            # KRW 마켓만 필터링
-            return [market for market in markets if market['market'].startswith('KRW-')]
-        return []
+        try:
+            response = requests.get(url, params=params, headers=headers)
+            
+            if response.status_code == 200:
+                markets = response.json()
+                # KRW 마켓만 필터링
+                return [market for market in markets if market['market'].startswith('KRW-')]
+            else:
+                return self._handle_api_error("마켓 정보 조회", response.status_code, response.text)
+        except Exception as e:
+            error_msg = f"마켓 정보 조회 중 예외 발생: {str(e)}"
+            if self.logger:
+                self.logger.error(error_msg)
+            raise
     
     def get_market_name(self) -> Dict[str, str]:
         """
@@ -383,5 +442,11 @@ class UpbitAPI:
         Returns:
             마켓 코드와 한글 이름 매핑 딕셔너리
         """
-        markets = self.get_market_info()
-        return {market['market']: market['korean_name'] for market in markets} 
+        try:
+            markets = self.get_market_info()
+            return {market['market']: market['korean_name'] for market in markets}
+        except Exception as e:
+            error_msg = f"마켓 이름 조회 중 예외 발생: {str(e)}"
+            if self.logger:
+                self.logger.error(error_msg)
+            raise 
