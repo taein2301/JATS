@@ -3,6 +3,7 @@ Upbit 트레이딩 시스템 모듈
 """
 from typing import Dict, List, Optional, Any, Tuple
 import time
+import schedule
 from datetime import datetime, timedelta
 import traceback
 
@@ -65,8 +66,7 @@ class UpbitTrader:
         self.last_check_time = {
             '10s': datetime.now(),
             '1m': datetime.now(),
-            '5m': datetime.now(),
-            '1h': datetime.now()
+            '5m': datetime.now()
         }
         
         # 초기 코인 정보를 BTC로 초기화
@@ -109,9 +109,19 @@ class UpbitTrader:
             # 거래량 상위 코인 갱신
             self.check_signal()
             
+            schedule.every().day.at("06:30").do(self.dis_portfolio)
+            schedule.every().day.at("09:00").do(self.dis_portfolio)
+            schedule.every().day.at("11:20").do(self.dis_portfolio)
+            schedule.every().day.at("17:30").do(self.dis_portfolio)
+            schedule.every().day.at("21:00").do(self.dis_portfolio)
+            schedule.every().day.at("21:52").do(self.dis_portfolio)
+            
             # 메인 루프
             while True:
                 now = datetime.now()
+                
+                # 스케줄 실행
+                schedule.run_pending()
                 
                 # 아침 6시에 승률 통계 초기화
                 if now.hour == 6 and now.minute == 0 and (now - self.trading_stats['last_reset']).total_seconds() >= 3600:
@@ -135,14 +145,6 @@ class UpbitTrader:
                     # 비정상 주문 취소
                     self.cancel_abnormal_orders()
                     
-                
-                # 1시간마다 실행
-                if (now - self.last_check_time['1h']).total_seconds() >= 3600:
-                    self.last_check_time['1h'] = now
-                    
-                    # 포트폴리오 분석 및 리포트
-                    self.dis_portfolio()
-                
                 # 잠시 대기
                 time.sleep(1)
                 
@@ -181,8 +183,7 @@ class UpbitTrader:
                 
             order_uuid = order_result['uuid']
             
-            # 주문 상태 확인 (최대 10초 대기)
-            for _ in range(10):
+            for _ in range(20):
                 time.sleep(1)
                 order_status = self.api.get_order_status(order_uuid)
                 
@@ -195,14 +196,15 @@ class UpbitTrader:
                     market_korean_name = self.api.get_market_name().get(market, market)
                     self.logger.critical(f"{market}({market_korean_name}) 매수 완료: {avg_price:,.0f}원")
                     self.notifier.send_message(
-                        f"{market}({market_korean_name}) 매수 완료\n수량: {executed_volume}\n가격: {avg_price:,.0f}원"
+                        f"{market}({market_korean_name}) 매수 완료\n가격: {avg_price:,.0f}원\n"
                     )
                     
                     return
             
-            # 10초 이내에 체결되지 않은 경우
-            self.logger.error(f"{market} 매수 주문이 10초 이내에 체결되지 않았습니다.")
-            self.notifier.send_message("매수 오류\n" + f"{market} 매수 주문이 10초 이내에 체결되지 않았습니다.")
+            # 20초 이내에 체결되지 않은 경우
+            market_korean_name = self.api.get_market_name().get(market, market)
+            self.logger.error(f"{market}({market_korean_name}) 매수 주문이 20초 이내에 체결되지 않았습니다.")
+            self.notifier.send_message("매수 오류\n" + f"{market}({market_korean_name}) 매수 주문이 20초 이내에 체결되지 않았습니다.")
             
         except Exception as e:
             self.logger.error(f"{market} 매수 중 오류 발생: {str(e)}")
@@ -316,8 +318,9 @@ class UpbitTrader:
                     return
             
             # 10초 이내에 체결되지 않은 경우
-            self.logger.warning(f"{market} 매도 주문이 10초 이내에 체결되지 않았습니다.")
-            self.notifier.send_message("매도 오류\n" + f"{market} 매도 주문이 10초 이내에 체결되지 않았습니다.")
+            market_name = self.api.get_market_name().get(market, market)
+            self.logger.warning(f"{market}({market_name}) 매도 주문이 10초 이내에 체결되지 않았습니다.")
+            self.notifier.send_message("매도 오류\n" + f"{market}({market_name}) 매도 주문이 10초 이내에 체결되지 않았습니다.")
 
         except Exception as e:
             self.logger.error(f"{market} 매도 중 오류 발생: {str(e)}")
@@ -487,7 +490,7 @@ class UpbitTrader:
                             self.position['krw_balance'] = total_krw
                             if current_price > self.position['top_price']:
                                 market_korean_name = self.api.get_market_name()[market]
-                                self.logger.info(f"최고가 갱신: {market_korean_name} - 기존 최고가 {self.position['top_price']}원 -> 현재가 {current_price}원")
+                                self.logger.info(f"최고가 갱신: {market_korean_name} - {self.position['top_price']}원 -> {current_price}원 DIFF {current_price - self.position['top_price']}원")
                                 self.position['top_price'] = current_price
                             return True  # 매수 포지션 (코인 보유)
                 
@@ -586,16 +589,15 @@ class UpbitTrader:
         코인별 수익률, 보유 수량 평가금액 등 계산
         """
         try:
-            summary = "포트폴리오 현황\n"
+            # 현재 시각 추가
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+            summary = f"({current_time}) 포트폴리오 현황 \n"
             summary += f"KRW: {self.position['krw_balance']:,.0f}원\n"
             
             # 포지션이 있는 경우에만 상세 정보 표시
             if self.position['market']:
                 market_korean_name = self.api.get_market_name()[self.position['market']]
-                summary += f"{market_korean_name}: {self.position['amount']} 개\n"
-                summary += f"평균매수가: {self.position['entry_price']:,.0f}원\n"
-                summary += f"현재가: {self.position['current_price']:,.0f}원\n"
-                summary += f"최고가: {self.position['top_price']:,.0f}원\n"
+                summary += f"{market_korean_name}\n"
                 summary += f"평가금액: {self.position['value_krw']:,.0f}원\n"
                 summary += f"수익률: {self.position['profit_pct']:.2f}%\n"
             else:
@@ -603,7 +605,7 @@ class UpbitTrader:
             
             # 승률 정보 추가
             summary += f"\n📊 오늘의 승률: {self.trading_stats['win_rate']:.2f}%\n"
-            summary += f"({self.trading_stats['wins']}승 {self.trading_stats['losses']}패, 총 {self.trading_stats['total_trades']}건)\n"
+            summary += f"총 {self.trading_stats['total_trades']}건 : {self.trading_stats['wins']}승 {self.trading_stats['losses']}패\n"
             
             # 알림 전송
             self.logger.info(summary)
@@ -663,3 +665,14 @@ class UpbitTrader:
         else:
             self.logger.info("🔄 일일 승률 초기화 완료 (어제 거래 없음)")
             self.notifier.send_message("🔄 일일 승률 초기화 완료 (어제 거래 없음)") 
+
+    def scheduled_portfolio_report(self, time):
+        """
+        스케줄에 따라 실행되는 포트폴리오 분석 래퍼 함수
+        
+        Args:
+            time: 실행 예약 시간 (로깅용)
+        """
+        self.logger.info(f"🕒 예약된 포트폴리오 분석 실행 중 (예약 시간: {time})")
+        return  # schedule 라이브러리가 필요로 함 
+        self.dis_portfolio()
