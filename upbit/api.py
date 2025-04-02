@@ -435,18 +435,26 @@ class UpbitAPI:
                 self.logger.error(error_msg)
             raise
     
-    def get_market_name(self) -> Dict[str, str]:
+    def get_market_kr_name(self, market: str) -> str:
         """
-        마켓의 한글 이름 조회
-        
+        마켓 코드에 해당하는 한글 이름을 반환
+
+        Args:
+            market: 마켓 코드 (예: KRW-BTC)
+            
         Returns:
-            마켓 코드와 한글 이름 매핑 딕셔너리
+            str: 마켓의 한글 이름. 찾지 못한 경우 빈 문자열 반환
         """
         try:
-            markets = self.get_market_info()
-            return {market['market']: market['korean_name'] for market in markets}
+            market_list = self.get_market_info()
+            for market_info in market_list:
+                if market_info['market'] == market:
+                    return market_info['korean_name']
+            return ''
         except Exception as e:
             error_msg = f"마켓 이름 조회 중 예외 발생: {str(e)}"
             if self.logger:
                 self.logger.error(error_msg)
-            raise 
+            return ''
+   
+    
