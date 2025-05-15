@@ -1,2 +1,4 @@
-source $HOME/JATS/jats_venv/bin/activate
-nohup python $HOME/JATS/main.py upbit prod &
+export JATS_HOME="$HOME/JATS"
+
+source $JATS_HOME/jats_venv/bin/activate
+nohup python $JATS_HOME/main.py upbit prod &
